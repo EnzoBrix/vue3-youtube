@@ -9,7 +9,6 @@ import { defineComponent, PropType } from 'vue'
 import getYouTubeID from 'get-youtube-id'
 
 interface Window {
-  onYouTubeIframeAPIReadyResolvers?: { (): void }[]
   onYouTubeIframeAPIReady?: { (): void }
 }
 
@@ -59,22 +58,12 @@ const YouTube = defineComponent({
     },
   },
   data() {
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    let resolver = () => {
-    }
-    const promise = new Promise<void>((resolve) => {
-      resolver = resolve
-    })
     const data: {
-      promise: Promise<void>
-      resolver: () => void
       player: null | YT.Player
       initiated: boolean
       ready: boolean
       iframeStyle: Record<string, string>
     } = {
-      promise,
-      resolver,
       player: null,
       initiated: false,
       ready: false,
@@ -88,24 +77,12 @@ const YouTube = defineComponent({
     }
     return data
   },
-  mounted() {
-    if (!(window as Window).onYouTubeIframeAPIReadyResolvers) {
-      (window as Window).onYouTubeIframeAPIReadyResolvers = []
-    }
-    if (!(window as Window).onYouTubeIframeAPIReady) {
-      (window as Window).onYouTubeIframeAPIReady = () => {
-        // eslint-disable-next-line no-unused-expressions
-        (window as Window).onYouTubeIframeAPIReadyResolvers?.forEach((resolver: Function) => {
-          resolver()
-        })
-      }
-    }
-    this.promise.then(() => this.initPlayer())
+  async mounted() {
     const id = 'youtube-iframe-js-api-script'
     let tag = document.getElementById(id) as HTMLScriptElement
     if (!tag) {
       // eslint-disable-next-line no-unused-expressions
-      (window as Window).onYouTubeIframeAPIReadyResolvers?.push(this.resolver)
+      (window as Window).onYouTubeIframeAPIReady = this.initPlayer
       tag = document.createElement('script')
       tag.id = id
       tag.src = 'https://www.youtube.com/iframe_api'
@@ -114,7 +91,7 @@ const YouTube = defineComponent({
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag)
       }
     } else {
-      this.resolver()
+      this.initPlayer()
     }
   },
   methods: {
